@@ -1,0 +1,199 @@
+string $ifl,$ofl,$hl;
+
+// A simple reverse foot set up
+// Usage: select the foot controller and then ankle, ball, and toe joint in order
+// Support foot roll, foot side, foot bank, toe tap
+proc reverseFoot(string $ankleJoint,string $ballJoint,string $toeJoint,string $ankle_IKH,
+                 string $footController,string $prefix)
+{
+    if ($ankleJoint == "" || $ballJoint == "" || $toeJoint == "" || $ankle_IKH ==" " || $footController == ""){
+        print ("please enter correct joint names.\n");
+        return;
+    }
+    string $inner_LOC = $prefix+"Innerfoot_LOC";
+    string $outter_LOC = $prefix+"Outterfoot_LOC";
+    string $heel_LOC = $prefix+"Heel_LOC";
+    string $ball_IKH = $prefix+"ball_IKH";
+    string $toe_IKH = $prefix+"toe_IKH";
+    string $heel_IKH_GRP = $prefix+"heel_IKH_GRP";
+    string $toeTap_IKH_GRP = $prefix+"toeTap_IKH_GRP";
+    string $toePivot_IKH_GRP = $prefix+"toePivot_IKH_GRP";
+    
+    hide $inner_LOC $outter_LOC $heel_LOC;
+    //set up ik sets - single chain
+    select -r $ankleJoint $ballJoint;
+    ikHandle -sol "ikSCsolver" -name $ball_IKH;
+    select -r $ballJoint $toeJoint;
+    ikHandle -sol "ikSCsolver" -name $toe_IKH;
+    
+    //heel grp
+    select -cl;
+    group -em -w -name $heel_IKH_GRP;
+    select -r $heel_IKH_GRP $ballJoint;
+    movePivot();
+    select -r $heel_IKH_GRP;
+    makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1;
+    
+    select -r $ankle_IKH $ball_IKH $heel_IKH_GRP;
+    parent;
+    
+    //toe grp
+    select -cl;
+    group -em -w -name $toeTap_IKH_GRP;
+    select -r $toeTap_IKH_GRP $ballJoint;
+    movePivot();
+    select -r $toeTap_IKH_GRP;
+    makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1;
+    select -r $toe_IKH $toeTap_IKH_GRP;
+    parent;
+    
+    //toe pivot grp
+    select -cl;
+    group -em -w -name $toePivot_IKH_GRP;
+    select -r $toePivot_IKH_GRP $toeJoint;
+    movePivot();
+    select -r $toePivot_IKH_GRP;
+    makeIdentity -apply true -t 1 -r 1 -s 1 -n 0 -pn 1;
+    select -r $heel_IKH_GRP $toeTap_IKH_GRP $toePivot_IKH_GRP;
+    parent;
+    
+    //side roll
+    select -r $toePivot_IKH_GRP $inner_LOC;
+    parent;
+    select -r $inner_LOC $outter_LOC;
+    parent;
+    //heel
+    select -r $outter_LOC $heel_LOC;
+    parent;
+    //foot controller
+    select -r $heel_LOC $footController;
+    parent;
+    
+    //set attributes
+    select -r $footController;
+    addAttr -ln "FootRoll"  -at "float";
+    setAttr -e-keyable true ($footController+".FootRoll") 0.0;
+    addAttr -ln "HeelRoll"  -at "float";
+    setAttr -e-keyable true ($footController+".HeelRoll") 0.0;
+    addAttr -ln "ToeTap"  -at "float";
+    setAttr -e-keyable true ($footController+".ToeTap") 0.0;
+    addAttr -ln "ToeTwist"  -at "float";
+    setAttr -e-keyable true ($footController+".ToeTwist") 0.0;
+    addAttr -ln "Side"  -at "float";
+    setAttr -e-keyable true ($footController+".Side") 0.0;
+    
+    //limit roatation
+    select -r $heel_LOC;
+    transformLimits -enableRotationX false true -rotationX 0 0;
+    select -r $toePivot_IKH_GRP;
+    transformLimits -enableRotationX true false -rotationX 0 0;
+    select -r $inner_LOC;
+    transformLimits -enableRotationZ true false -rotationZ 0 0;
+    select -r $outter_LOC;
+    transformLimits -enableRotationZ false true -rotationZ 0 0;
+    
+    //connection nodes
+    connectAttr -f ($footController+".FootRoll") ($heel_LOC+".rotateX");
+    connectAttr -f ($footController+".FootRoll") ($toePivot_IKH_GRP+".rotateX");
+    connectAttr -f ($footController+".HeelRoll") ($heel_IKH_GRP+".rotateX");
+    connectAttr -f ($footController+".ToeTap") ($toeTap_IKH_GRP+".rotateX");
+    connectAttr -f ($footController+".ToeTwist") ($toePivot_IKH_GRP+".rotateY");
+    connectAttr -f ($footController+".Side") ($inner_LOC+".rotateZ");
+    connectAttr -f ($footController+".Side") ($outter_LOC+".rotateZ");
+    //lock and contraint rotations..
+
+    hide `ls -type ikHandle`;
+    select -cl;
+}
+
+proc createLocators(string $ajtext,string $bjtext,string $tjtext,string $aikhtext,
+                    string $ftctext,string $pretext)
+{
+    string $ofl,$ifl,$hl;
+    select -cl;
+    if(`textField -q -text $ajtext`=="" || `textField -q -text $bjtext`=="" 
+    || `textField -q -text $tjtext`=="" || `textField -q -text $aikhtext`=="" 
+    || `textField -q -text $ftctext`==""){       // if required object not found
+        error "Select required objects.";
+    }else{
+        select -r `textField -q -text $ajtext`; //select ankle joint
+        float $pos[] = `xform -q -t -ws`;
+        string $preloc1 = `textField -q -tx $pretext`+"Heel_LOC";
+        string $preloc2 = `textField -q -tx $pretext`+"Innerfoot_LOC";
+        string $preloc3 = `textField -q -tx $pretext`+"Outterfoot_LOC";
+        //create locators
+        string $loc1[] = `spaceLocator -p $pos[0] 0 ($pos[2]-1) -n $preloc1`;
+        string $loc2[] = `spaceLocator -p ($pos[0]-1) 0 ($pos[2]+1) -n $preloc2`;
+        string $loc3[] = `spaceLocator -p ($pos[0]+1) 0 ($pos[2]+1) -n $preloc3`;
+        $hl=$loc1[0];
+        $ifl=$loc2[0];
+        $ofl=$loc3[0];
+        select -r $ofl $ifl $hl;
+        CenterPivot;
+        scale -r 0.1 0.1 0.1;
+    }
+}
+
+proc readObjectName(string $tfd)
+{
+    string $sel[] = `ls -sl`;
+    if(size($sel)==1){textField -edit -tx $sel[0] $tfd;};
+}
+
+//move pivot to target object location
+proc movePivot()
+{
+    string $sel[] = `ls -sl`;
+    string $obj,$target;
+    if(size($sel)==2){
+        $obj = $sel[0];
+        $target = $sel[1];
+    }else{
+        error("movePivot: Please select the object and target position");
+        return;
+    }
+    parentConstraint -n "TempConstraint" $target $obj;
+    delete "TempConstraint";
+}
+
+if (`window -exists reverseFootUI`) {
+    deleteUI reverseFootUI;
+}
+
+window -title "Reverse Foot" -widthHeight 320 200 reverseFootUI;
+    columnLayout -adjustableColumn true;
+    //Generate ui
+    frameLayout -label "Reverse Foot Control";
+        rowLayout -numberOfColumns 3 -columnWidth3 80 75 150;
+            text -label "Ankle Joint";
+            $ajtext = `textField -tx ""` ;
+            button -label "<" -command "readObjectName($ajtext)";
+            setParent ..;
+        rowLayout -numberOfColumns 3 -columnWidth3 80 75 150;
+            text -label "Ball Joint";
+            $bjtext = `textField -tx $bj`;
+            button -label "<" -command "readObjectName($bjtext)";
+            setParent ..;
+        rowLayout -numberOfColumns 3 -columnWidth3 80 75 150;
+            text -label "Toe Joint";
+            $tjtext = `textField -tx $tj`;
+            button -label "<" -command "readObjectName($tjtext)";
+            setParent ..;
+        rowLayout -numberOfColumns 3 -columnWidth3 80 75 150;
+            text -label "Leg IK Handle";
+            $aikhtext = `textField -tx $aikh`;
+            button -label "<" -command "readObjectName($aikhtext)";
+            setParent ..;
+        rowLayout -numberOfColumns 3 -columnWidth3 80 75 150;
+            text -label "Foot Controller";
+            $ftctext = `textField -tx $ftc`;
+            button -label "<" -command "readObjectName($ftctext)";
+            setParent ..;
+        rowLayout -numberOfColumns 2 -columnWidth3 80 75 150;
+            text -label "Prefix";
+            $pretext = `textField -tx $pre`;
+            setParent ..;
+        button -label "Create Locators" -command "createLocators($ajtext,$bjtext,$tjtext,$aikhtext,$ftctext,$pretext)";
+        button -label "Set Up Reverse Foot" -command ("reverseFoot(`textField -q -text $ajtext`,`textField -q -text $bjtext`,`textField -q -text $tjtext`,`textField -q -text $aikhtext`,`textField -q -text $ftctext`,`textField -q -text $pretext`)");
+    setParent ..;
+showWindow reverseFootUI;
