@@ -1,5 +1,9 @@
 # codeSamples
 
+## Reverse Foot Set Up/MEL
+
+A simple reverse foot set up speed up rigging process. Select the foot controller, leg ik and the required joints. Then user can move 3 generated locators to desired locations. Finally seting up reverse foot rig will add foot roll, foot side, foot bank, toe tap attributes to foot controller.
+
 ## Knight's Tour/C
 
 Use multithread to solve Knight's Tour problem. Given a m*n board, check if it is possible for Knight visit each square exactly once. Print out the deadend boards.
