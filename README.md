@@ -2,6 +2,7 @@
 
 ## Reverse Foot Set Up/MEL
 
+[DEMO](https://vimeo.com/465442886)
 A simple reverse foot set up speed up rigging process. Select the foot controller, leg ik and the required joints. Then user can move 3 generated locators to desired locations. Finally seting up reverse foot rig will add foot roll, foot side, foot bank, toe tap attributes to foot controller.
 
 ## Knight's Tour/C
