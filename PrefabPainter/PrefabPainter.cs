@@ -15,14 +15,6 @@ public class PrefabPainter : ScriptableObject
     
     public int density = 1;
     public float radius = 5f;
-
-    //public bool randomYaw = true;
-    //public bool alignToNormal = true;
-    //public float slopeAngleMin = 0.0f; 
-    //public float slopeAngleMax = 45.0f;
-    //public float scaleMin = 1.0f;
-    //public float scaleMax = 1.5f;
-
     public int currSelIndex = -1;
     //public int count = 0;
     public List<PaintAsset> paintAssetsDatabase = new List<PaintAsset>();
