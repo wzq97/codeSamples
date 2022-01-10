@@ -1,4 +1,4 @@
-string $ifl,$ofl,$hl;
+string $ifl,$ofl,$hl,$pre,$ftc,$aikh,$tj,$bj;
 
 // A simple reverse foot set up
 // Usage: select the foot controller and then ankle, ball, and toe joint in order
